@@ -20,8 +20,6 @@ WIDTH, HEIGHT = 1080, 1920
 GREEN = (0, 255, 0)
 RED = (0, 0, 255)
 X, Y = 0, 0
-SCORE = 0
-HighScore = 0
 class WebcamStream:
     # initialization method
     def __init__(self, stream_id=0):
@@ -105,6 +103,9 @@ p = np.zeros((21,3))
     *                                                                          *
     *__________________________________________________________________________*
 """
+import imageio
+from PIL import Image, ImageSequence
+
 
 g = 1.8
 class Ball:
@@ -122,6 +123,8 @@ class Ball:
 
         self.v = np.array([0,-20],dtype=np.float64)
         self.score = 0
+        self.high_score = HIGH_SCORE
+        self.champ= CHAMP
 
     def update(self):
         self.x += self.v[0]
@@ -164,12 +167,15 @@ class Ball:
                 continue
             diff = np.array([landmarks[i,0], landmarks[i,1]]) - np.array([self.x, self.y])
             dist = np.linalg.norm(diff)
-            if dist <= self.r:
+            if dist <= self.r and self.v[1] > -1:
                 self.v -= 76*diff/dist
 
                 self.score +=1
-                # self.x -= diff[0]
-                # self.y -= diff[1]
+                if self.score > self.high_score:
+                    self.high_score = self.score
+                    self.champ = name
+
+
                 break
 
         return False
@@ -183,6 +189,16 @@ class Ball:
     *                                                                           *
     *___________________________________________________________________________*
 """
+
+file1 = open("high_score.txt","r")
+HIGH_SCORE = int(file1.read())
+file1.close()
+
+file1 = open("champ.txt","r")
+CHAMP = file1.read()
+file1.close()
+
+name = input("Enter your name: ")
 p = np.zeros((33,3))
 ball = Ball(500,100,60)
 while (True):
@@ -200,6 +216,8 @@ while (True):
             p[i, 0], p[i, 1], p[i, 2] = mark.x * HEIGHT, mark.y * WIDTH, mark.z * HEIGHT
 
     cv2.putText(frame, f'Score: {ball.score}', (150, 150), cv2.FONT_HERSHEY_SIMPLEX, 2, (250, 250, 250), 6, cv2.LINE_AA)
+    cv2.putText(frame, f'High Score: {ball.high_score} ({ball.champ})', (750, 150), cv2.FONT_HERSHEY_SIMPLEX, 2, (250, 250, 250), 6, cv2.LINE_AA)
+
     ball.draw(frame)
     # Display the resulting frame
     cv2.imshow('output', frame)
@@ -213,6 +231,16 @@ while (True):
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
+
+if ball.high_score > HIGH_SCORE:
+    file1 = open("high_score.txt", "w")
+    file1.write(str(ball.high_score))
+    file1.close()
+
+    file1 = open("champ.txt", "w")
+    file1.write(name[:10])
+    file1.close()
+    print("new high score")
 
 # After the loop release the cap object
 webcam_stream.vcap.release()
